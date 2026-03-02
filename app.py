@@ -68,9 +68,9 @@ if df is not None:
     
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
-        st.subheader("Monitoramento de Preenchimento (Últimas 3 Colunas)")
+        st.subheader("Monitoramento de Pendências")
     with col_refresh:
-        if st.button("🔄 Atualizar Dados"):
+        if st.button("🔄 Atualizar"):
             st.cache_data.clear()
             st.rerun()
 
@@ -112,7 +112,7 @@ if df is not None:
     m2.metric("Viagens com Alguma Pendência", total_pendentes, delta_color="inverse")
     m3.metric("Taxa de Integridade", f"{taxa_preenchimento:.1f}%")
 
-    st.markdown("#### 🔍 Pendências Específicas por Assunto")
+    st.markdown("#### 🔍 Pendências por Assunto")
     c1, c2, c3 = st.columns(3)
     cols_metrics = [c1, c2, c3]
     dt_col_name = df.columns[0]  # Assume que a coluna A (DT) é a primeira
