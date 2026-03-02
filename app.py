@@ -8,11 +8,28 @@ st.set_page_config(page_title="Dashboard Operação Heineken", layout="wide")
 # Estilização customizada para um visual mais moderno
 st.markdown("""
     <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    /* Fundo da página */
+    .main { background-color: #f4f7f6; }
+    
+    /* Estilização dos Cards de Métrica */
+    [data-testid="stMetric"] {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-left: 5px solid #ff7900; /* Laranja Ritmo */
+    }
+    
     /* Força a cor do texto das métricas para garantir visibilidade sobre o fundo branco */
-    [data-testid="stMetricValue"] > div { color: #1f2937 !important; }
-    [data-testid="stMetricLabel"] > div { color: #4b5563 !important; }
+    [data-testid="stMetricValue"] > div { color: #004a99 !important; font-weight: bold; }
+    [data-testid="stMetricLabel"] > div { color: #555555 !important; }
+    
+    /* Botões customizados */
+    .stButton>button {
+        background-color: #004a99;
+        color: white;
+        border-radius: 5px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,7 +59,12 @@ if df is not None:
         # Mantém apenas as linhas onde a coluna U não está vazia ou nula
         df = df[df[col_u].notna() & (df[col_u].astype(str).str.strip() != "")]
 
-    st.title("📊 Auditoria de Pendências - Heineken")
+    # Barra Lateral com Logo
+    st.sidebar.image("https://www.ritmolog.com.br/wp-content/uploads/2020/07/logo-ritmo-logistica.png", width=200)
+    st.sidebar.divider()
+    st.sidebar.markdown("### 🚛 Operação Heineken Spot")
+
+    st.title("📊 Auditoria de Pendências")
     
     col_title, col_refresh = st.columns([4, 1])
     with col_title:
@@ -153,7 +175,7 @@ if df is not None:
         
         fig_bar = px.bar(df_stats, x="Coluna", y="Qtd. Pendentes", 
                          text="Qtd. Pendentes", title="Pendências de 'ok' por Coluna",
-                         color="Coluna", color_discrete_sequence=px.colors.qualitative.Set2)
+                         color_discrete_sequence=['#004a99', '#ff7900', '#555555'])
         st.plotly_chart(fig_bar, use_container_width=True)
 
         st.info(f"**Nota:** As colunas analisadas são as 3 últimas encontradas na aba HEINEKEN: {', '.join(ultimas_3_cols)}")
