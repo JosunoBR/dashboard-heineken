@@ -62,8 +62,7 @@ if df is not None:
 
     # Adicionamos uma coluna informativa para mostrar o que falta preencher
     def listar_faltantes(row):
-        faltam = [col for col in ultimas_3_cols if not verificar_ok(row[col])]
-        return ", ".join(faltam)
+        return ", ".join([col for col in ultimas_3_cols if not verificar_ok(row[col])])
 
     if not df_pendencias.empty:
         df_pendencias["⚠️ Colunas Faltantes"] = df_pendencias.apply(listar_faltantes, axis=1)
@@ -74,7 +73,11 @@ if df is not None:
     
     total_viagens = len(df)
     total_pendentes = len(df_pendencias)
-    taxa_preenchimento = ((total_viagens - total_pendentes) / total_viagens * 100) if total_viagens > 0 else 0
+
+    # Cálculo da Taxa de Integridade baseado no preenchimento individual de cada célula (OKs totais / Células totais)
+    total_celulas_monitoradas = total_viagens * len(ultimas_3_cols)
+    total_ok_encontrados = check_cols.sum().sum()
+    taxa_preenchimento = (total_ok_encontrados / total_celulas_monitoradas * 100) if total_celulas_monitoradas > 0 else 0
 
     m1.metric("Total de Viagens", total_viagens)
     m2.metric("Viagens com Alguma Pendência", total_pendentes, delta_color="inverse")
