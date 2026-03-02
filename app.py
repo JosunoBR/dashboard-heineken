@@ -35,6 +35,13 @@ def load_data():
 df = load_data()
 
 if df is not None:
+    # --- FILTRO DE VIAGENS INICIADAS ---
+    # A coluna "U" corresponde ao índice 20 (A=0, B=1... U=20)
+    if len(df.columns) > 20:
+        col_u = df.columns[20]
+        # Mantém apenas as linhas onde a coluna U não está vazia ou nula
+        df = df[df[col_u].notna() & (df[col_u].astype(str).str.strip() != "")]
+
     st.title("📊 Auditoria de Pendências - Heineken")
     
     col_title, col_refresh = st.columns([4, 1])
