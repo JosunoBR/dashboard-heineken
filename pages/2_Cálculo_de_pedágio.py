@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import hashlib
 import unicodedata
+from datetime import datetime
 
 st.set_page_config(page_title="Cálculo de Pedágio", layout="wide")
 
@@ -56,6 +57,16 @@ def normalize_currency(value):
     value = value.replace("-R$", "R$").replace("- R$", "R$")
     return value.strip()
 
+def parse_filter_date(date_text):
+    """Converte a data digitada no filtro para o formato datetime.date."""
+    if not date_text:
+        return None
+
+    try:
+        return datetime.strptime(date_text.strip(), "%d/%m/%Y").date()
+    except ValueError:
+        return None
+
 def extract_toll_info(text):
     """
     Extrai a placa do veículo e uma lista de transações (data e valor).
@@ -102,6 +113,22 @@ def extract_toll_info(text):
 
 # --- Lógica da Página ---
 
+filter_col1, filter_col2 = st.columns(2)
+
+with filter_col1:
+    start_date_text = st.text_input(
+        "Data inicial",
+        placeholder="DD/MM/AAAA",
+        key="toll_filter_start"
+    )
+
+with filter_col2:
+    end_date_text = st.text_input(
+        "Data final",
+        placeholder="DD/MM/AAAA",
+        key="toll_filter_end"
+    )
+
 uploaded_file = st.file_uploader("Escolha um arquivo PDF", type="pdf", key="pdf_uploader")
 
 if uploaded_file is not None:
@@ -144,6 +171,28 @@ if st.session_state.toll_history:
         ]
 
     df_history = pd.DataFrame(st.session_state.toll_history)
+    df_history["Data da Transação Dt"] = pd.to_datetime(
+        df_history["Data da Transação"],
+        format="%d/%m/%Y %H:%M:%S",
+        errors="coerce"
+    )
+
+    start_date = parse_filter_date(start_date_text)
+    end_date = parse_filter_date(end_date_text)
+    invalid_start = bool(start_date_text.strip()) and start_date is None
+    invalid_end = bool(end_date_text.strip()) and end_date is None
+
+    if invalid_start or invalid_end:
+        st.warning("Informe as datas do filtro no formato DD/MM/AAAA.")
+    elif start_date and end_date and start_date > end_date:
+        st.warning("A data inicial deve ser menor ou igual à data final.")
+    else:
+        if start_date:
+            df_history = df_history[df_history["Data da Transação Dt"].dt.date >= start_date]
+        if end_date:
+            df_history = df_history[df_history["Data da Transação Dt"].dt.date <= end_date]
+
+    df_history = df_history.drop(columns=["Data da Transação Dt"])
     st.dataframe(df_history, width='stretch')
 
     # --- Cálculo do Valor Total ---
