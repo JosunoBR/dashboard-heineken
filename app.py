@@ -59,11 +59,6 @@ if df is not None:
         # Mantém apenas as linhas onde a coluna U não está vazia ou nula
         df = df[df[col_u].notna() & (df[col_u].astype(str).str.strip() != "")]
 
-    # Barra Lateral com Logo
-    st.sidebar.image("https://www.ritmolog.com.br/wp-content/uploads/2020/07/logo-ritmo-logistica.png", width=200)
-    st.sidebar.divider()
-    st.sidebar.markdown("### 🚛 Operação Heineken Spot")
-
     st.title("📊 Auditoria de Pendências")
     
     col_title, col_refresh = st.columns([4, 1])
@@ -83,7 +78,7 @@ if df is not None:
         return str(valor).strip().lower() == "ok"
 
     # Verificamos cada uma das 3 colunas
-    check_cols = df[ultimas_3_cols].applymap(verificar_ok)
+    check_cols = df[ultimas_3_cols].map(verificar_ok)
     
     # Uma linha é pendente se pelo menos uma das colunas NÃO tiver "ok"
     mask_pendente = ~check_cols.all(axis=1)
@@ -132,7 +127,7 @@ if df is not None:
         st.info(f"### 📄 DTs Pendentes - {col_alvo}")
         # Filtra as DTs onde a coluna específica não tem "ok"
         lista_dts = df.loc[~df[col_alvo].apply(verificar_ok), [dt_col_name]]
-        st.dataframe(lista_dts, use_container_width=True, hide_index=True)
+        st.dataframe(lista_dts, width='stretch', hide_index=True)
         if st.button("✖️ Fechar Lista"):
             del st.session_state.selected_dt_col
             st.rerun()
@@ -155,7 +150,7 @@ if df is not None:
 
             # Reordenar para mostrar a coluna de aviso primeiro
             cols_view = ["⚠️ Colunas Faltantes"] + [c for c in df_exibir.columns if c != "⚠️ Colunas Faltantes"]
-            st.dataframe(df_exibir[cols_view], use_container_width=True)
+            st.dataframe(df_exibir[cols_view], width='stretch')
             
             # Botão para exportar apenas o que falta preencher
             csv = df_exibir.to_csv(index=False).encode('utf-8')
