@@ -57,13 +57,16 @@ def normalize_currency(value):
     value = value.replace("-R$", "R$").replace("- R$", "R$")
     return value.strip()
 
-def parse_filter_datetime(datetime_text):
-    """Converte o texto digitado no filtro para datetime."""
+def parse_filter_datetime(datetime_text, end_of_minute=False):
+    """Converte o texto digitado no filtro para datetime com precisão de minuto."""
     if not datetime_text:
         return None
 
     try:
-        return datetime.strptime(datetime_text.strip(), "%d/%m/%Y %H:%M:%S")
+        parsed_datetime = datetime.strptime(datetime_text.strip(), "%d/%m/%Y %H:%M")
+        if end_of_minute:
+            parsed_datetime = parsed_datetime.replace(second=59)
+        return parsed_datetime
     except ValueError:
         return None
 
@@ -118,14 +121,14 @@ filter_col1, filter_col2 = st.columns(2)
 with filter_col1:
     start_date_text = st.text_input(
         "Data e hora inicial",
-        placeholder="DD/MM/AAAA HH:MM:SS",
+        placeholder="DD/MM/AAAA HH:MM",
         key="toll_filter_start"
     )
 
 with filter_col2:
     end_date_text = st.text_input(
         "Data e hora final",
-        placeholder="DD/MM/AAAA HH:MM:SS",
+        placeholder="DD/MM/AAAA HH:MM",
         key="toll_filter_end"
     )
 
@@ -178,12 +181,12 @@ if st.session_state.toll_history:
     )
 
     start_datetime = parse_filter_datetime(start_date_text)
-    end_datetime = parse_filter_datetime(end_date_text)
+    end_datetime = parse_filter_datetime(end_date_text, end_of_minute=True)
     invalid_start = bool(start_date_text.strip()) and start_datetime is None
     invalid_end = bool(end_date_text.strip()) and end_datetime is None
 
     if invalid_start or invalid_end:
-        st.warning("Informe os filtros no formato DD/MM/AAAA HH:MM:SS.")
+        st.warning("Informe os filtros no formato DD/MM/AAAA HH:MM.")
     elif start_datetime and end_datetime and start_datetime > end_datetime:
         st.warning("A data e hora inicial deve ser menor ou igual à data e hora final.")
     else:
