@@ -146,6 +146,19 @@ if st.session_state.toll_history:
     df_history = pd.DataFrame(st.session_state.toll_history)
     st.dataframe(df_history, width='stretch')
 
+    # --- Cálculo do Valor Total ---
+    total_soma = 0.0
+    for valor_str in df_history["Valor da Transação"]:
+        # Limpa a string "R$ 72,96" para converter em float 72.96
+        num_str = valor_str.replace("R$", "").replace(".", "").replace(",", ".").strip()
+        try:
+            total_soma += float(num_str)
+        except ValueError:
+            pass
+    
+    total_formatado = f"R$ {total_soma:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    st.markdown(f"### 💰 Valor Total: **{total_formatado}**")
+
     # Botão para limpar o histórico
     if st.button("🗑️ Limpar Histórico"):
         st.session_state.toll_history = []
