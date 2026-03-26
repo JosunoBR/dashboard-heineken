@@ -152,6 +152,7 @@ if df_raw is not None:
 </div>
 """
             metrics_html += "</div>"
+            metrics_html = "\n".join([line.strip() for line in metrics_html.split('\n')])
             st.markdown(metrics_html, unsafe_allow_html=True)
                 
             st.divider()
@@ -229,6 +230,7 @@ if df_raw is not None:
             html_cards += "</div>"
             
             if not df_view.empty:
+                html_cards = "\n".join([line.strip() for line in html_cards.split('\n')])
                 st.markdown(html_cards, unsafe_allow_html=True)
             else:
                 st.info("Nenhum veículo corresponde a este filtro.")
