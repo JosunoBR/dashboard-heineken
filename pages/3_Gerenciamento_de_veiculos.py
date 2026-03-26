@@ -119,28 +119,105 @@ if df_raw is not None:
             
             st.markdown("### 📋  Lista de Veículos")
             
-            # 5. Interface Visual
-            status_filter = st.selectbox("Filtrar por Status", ["Todos"] + df_frota['Status Atual'].unique().tolist())
+            # 5. Interface Visual (Cards Customizados em SVG)
+            col_view_filtro, col_view_csv = st.columns([3, 1])
+            with col_view_filtro:
+                status_filter = st.selectbox("📌 Filtrar por Status", ["Todos"] + df_frota['Status Atual'].unique().tolist())
             
             df_view = df_frota.copy()
             if status_filter != "Todos":
                 df_view = df_view[df_view['Status Atual'] == status_filter]
                 
-            cols_to_drop = [c for c in df_view.columns if c.endswith("_dt") or c in ["Ultimo_Evento_Dt", "Referencia_Filtro"]]
-            df_view = df_view.drop(columns=cols_to_drop)
+            with col_view_csv:
+                st.write("") # alinhamento
+                st.write("")
+                csv_export = df_view.drop(columns=[c for c in df_view.columns if c.endswith('_dt') or c in ['Ultimo_Evento_Dt', 'Referencia_Filtro']]).to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Exportar (CSV)",
+                    data=csv_export,
+                    file_name=f"gerenciamento_frota_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv"
+                )
+                
+            # Mapeamento do Visual
+            cores_status = {
+                "Coleta programada": "#9e9e9e",
+                "Em carregamento": "#2196f3",
+                "Em viagem": "#ff9800",
+                "Aguardando descarga/Descarregando": "#9c27b0",
+                "Vazio": "#4caf50"
+            }
+            bg_luz = {
+                "Coleta programada": "#f5f5f5",
+                "Em carregamento": "#e3f2fd",
+                "Em viagem": "#fff3e0",
+                "Aguardando descarga/Descarregando": "#f3e5f5",
+                "Vazio": "#e8f5e9"
+            }
+
+            html_cards = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:20px;'>"
+            for _, row in df_view.iterrows():
+                placa = row[col_placa]
+                status = row['Status Atual']
+                cor = cores_status.get(status, "#000000")
+                bg = bg_luz.get(status, "#ffffff")
+                
+                # Tratar valores vazios para n dar erro no HTML
+                dt_ch_coleta = str(row[col_chegada_coleta]) if pd.notna(row[col_chegada_coleta]) else "---"
+                dt_sai_coleta = str(row[col_saida_coleta]) if pd.notna(row[col_saida_coleta]) else "---"
+                dt_ch_cliente = str(row[col_chegada_cliente]) if pd.notna(row[col_chegada_cliente]) else "---"
+                dt_sai_descarga = str(row[col_saida_descarga]) if pd.notna(row[col_saida_descarga]) else "---"
+                
+                # Evitar erro se o Ultimo Evento for nulo devido ao preenchimento de proteção
+                data_event = row['Ultimo_Evento_Dt'] if 'Ultimo_Evento_Dt' in row and pd.notna(row['Ultimo_Evento_Dt']) else row['Referencia_Filtro']
+                txt_ref = data_event.strftime("%d/%m/%Y") if pd.notna(data_event) else "?"
+
+                html_cards += f'''
+                <div style="background-color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); display: flex; align-items: center; border-left: 6px solid {cor}; font-family: sans-serif;">
+                    
+                    <!-- Caminhão em SVG -->
+                    <div style="margin-right: 25px;">
+                        <svg width="65" height="40" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Cabine -->
+                            <path d="M 46 15 L 53 15 L 59 23 L 59 34 L 46 34 Z" fill="#444" />
+                            <path d="M 48 17 L 52 17 L 56 22 L 48 22 Z" fill="#fff" />
+                            <!-- Rodas -->
+                            <circle cx="16" cy="34" r="5" fill="#222"/>
+                            <circle cx="51" cy="34" r="5" fill="#222"/>
+                            <circle cx="34" cy="34" r="5" fill="#222"/>
+                            <!-- Baú Colorido -->
+                            <rect x="2" y="5" width="42" height="29" rx="2" fill="{cor}" />
+                            <text x="23" y="24" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">FROTA</text>
+                        </svg>
+                    </div>
+                    
+                    <!-- Textos -->
+                    <div style="flex-grow: 1;">
+                        <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px;">{placa}</h3>
+                        <div style="display: flex; gap: 20px; margin-top: 5px; color: #666; font-size: 13px;">
+                            <span><b>Coleta:</b> {dt_ch_coleta}</span>
+                            <span><b>Viagem:</b> {dt_sai_coleta}</span>
+                            <span><b>Descarga:</b> {dt_ch_cliente}</span>
+                            <span><b>Fim:</b> {dt_sai_descarga}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Label -->
+                    <div style="text-align: right; min-width: 150px;">
+                        <div style="background-color: {bg}; color: {cor}; padding: 6px 12px; border-radius: 12px; font-weight: bold; font-size: 12px; display: inline-block;">
+                            {status}
+                        </div>
+                        <div style="margin-top: 6px; font-size: 11px; color: #999;">Últ. Ref: {txt_ref}</div>
+                    </div>
+                </div>
+                '''
+                
+            html_cards += "</div>"
             
-            cols = [col_placa, 'Status Atual'] + [c for c in df_view.columns if c not in [col_placa, 'Status Atual']]
-            df_view = df_view[cols]
-            
-            st.dataframe(df_view, width='stretch', hide_index=True)
-            
-            csv = df_view.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Exportar Lista (CSV)",
-                data=csv,
-                file_name=f"gerenciamento_frota_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                mime="text/csv"
-            )
+            if not df_view.empty:
+                st.markdown(html_cards, unsafe_allow_html=True)
+            else:
+                st.info("Nenhum veículo corresponde a este filtro.")
         else:
             st.info("Nenhum veículo encontrado no período analisado.")
     else:
