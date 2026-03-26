@@ -62,15 +62,15 @@ if df_raw is not None:
             f"{col_chegada_cliente}_dt", f"{col_saida_descarga}_dt"
         ]].max(axis=1)
 
-        # 2. Filtro dos últimos 2 meses
+        # 2. Filtro dos últimos 20 dias
         hoje = pd.Timestamp.now()
-        limite_2_meses = hoje - pd.DateOffset(months=2)
+        limite_20_dias = hoje - pd.DateOffset(days=20)
 
         # Tratar a coluna base C (DATA) para usar como referência de linhas sem horários
         df[f"{col_data_c}_dt"] = parse_dates(df[col_data_c])
         df['Referencia_Filtro'] = df['Ultimo_Evento_Dt'].fillna(df[f"{col_data_c}_dt"])
         
-        mask_tempo = df['Referencia_Filtro'] >= limite_2_meses
+        mask_tempo = df['Referencia_Filtro'] >= limite_20_dias
         
         df_filtrado = df[mask_tempo].copy()
 
