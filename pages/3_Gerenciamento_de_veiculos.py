@@ -179,7 +179,7 @@ if df_raw is not None:
             st.markdown("### 📋  Lista de Veículos")
             
             # 5. Interface Visual (Com Barra de Pesquisa)
-            col_search, _, col_view_csv = st.columns([2, 5, 1])
+            col_search, _ = st.columns([3, 7])
             with col_search:
                 search_placa = st.text_input("🔍 Buscar por Placa:", placeholder="Digite a placa...")
             
@@ -190,17 +190,6 @@ if df_raw is not None:
                 df_view = df_view[df_view[col_placa].astype(str).str.contains(search_placa.strip(), case=False, na=False)]
             if status_filter != "Todos":
                 df_view = df_view[df_view['Status Atual'] == status_filter]
-                
-            with col_view_csv:
-                st.write("") # alinhamento
-                st.write("")
-                csv_export = df_view.drop(columns=[c for c in df_view.columns if c.endswith('_dt') or c in ['Ultimo_Evento_Dt', 'Referencia_Filtro']]).to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Exportar (CSV)",
-                    data=csv_export,
-                    file_name=f"gerenciamento_frota_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                    mime="text/csv"
-                )
                 
             html_cards = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:10px;'>"
             for _, row in df_view.iterrows():
