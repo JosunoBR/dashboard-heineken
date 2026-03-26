@@ -137,16 +137,16 @@ if df_raw is not None:
                 
                 metrics_html += f"""
 <div style="background-color: white; padding: 15px 10px; border-radius: 10px; border-bottom: 5px solid {cor}; flex: 1; min-width: 120px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
-    <svg width="50" height="30" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+    <svg width="75" height="45" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
         <path d="M 46 15 L 53 15 L 59 23 L 59 34 L 46 34 Z" fill="#444" />
         <path d="M 48 17 L 52 17 L 56 22 L 48 22 Z" fill="#fff" />
         <circle cx="16" cy="34" r="5" fill="#222"/>
         <circle cx="51" cy="34" r="5" fill="#222"/>
         <circle cx="34" cy="34" r="5" fill="#222"/>
         <rect x="2" y="5" width="42" height="29" rx="2" fill="{cor}" />
+        <text x="23" y="25" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">{qtd}</text>
     </svg>
-    <div style="font-size: 28px; font-weight: bold; color: #333; margin: 5px 0 2px 0;">{qtd}</div>
-    <div style="font-size: 11px; font-weight: bold; color: {cor}; text-transform: uppercase;">
+    <div style="font-size: 12px; font-weight: bold; color: {cor}; text-transform: uppercase; margin-top: 8px;">
         {label}
     </div>
 </div>
