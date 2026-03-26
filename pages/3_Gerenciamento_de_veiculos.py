@@ -103,17 +103,56 @@ if df_raw is not None:
             
             status_counts = df_frota['Status Atual'].value_counts()
             
-            col1, col2, col3, col4, col5 = st.columns(5)
-            with col1:
-                st.metric("📦 Programada", status_counts.get("Coleta programada", 0))
-            with col2:
-                st.metric("🏗️ Em carreg. ", status_counts.get("Em carregamento", 0))
-            with col3:
-                st.metric("🚚 Em viagem", status_counts.get("Em viagem", 0))
-            with col4:
-                st.metric("⏳ Aguardando", status_counts.get("Aguardando descarga/Descarregando", 0))
-            with col5:
-                st.metric("✅ Vazio", status_counts.get("Vazio", 0))
+            # Mapeamento Global de Estilo
+            cores_status = {
+                "Coleta programada": "#9e9e9e",
+                "Em carregamento": "#2196f3",
+                "Em viagem": "#ff9800",
+                "Aguardando descarga/Descarregando": "#9c27b0",
+                "Vazio": "#4caf50"
+            }
+            bg_luz = {
+                "Coleta programada": "#f5f5f5",
+                "Em carregamento": "#e3f2fd",
+                "Em viagem": "#fff3e0",
+                "Aguardando descarga/Descarregando": "#f3e5f5",
+                "Vazio": "#e8f5e9"
+            }
+            
+            labels_curtas = {
+                "Coleta programada": "PROGRAMADA",
+                "Em carregamento": "CARREGANDO",
+                "Em viagem": "EM VIAGEM",
+                "Aguardando descarga/Descarregando": "AGUARDANDO",
+                "Vazio": "VAZIO"
+            }
+
+            metrics_html = '<div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">'
+            
+            for status in ["Coleta programada", "Em carregamento", "Em viagem", "Aguardando descarga/Descarregando", "Vazio"]:
+                qtd = status_counts.get(status, 0)
+                cor = cores_status[status]
+                bg = bg_luz[status]
+                label = labels_curtas[status]
+                
+                metrics_html += f"""
+<div style="background-color: white; padding: 15px 10px; border-radius: 10px; border-bottom: 5px solid {cor}; flex: 1; min-width: 120px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
+    <svg width="50" height="30" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 46 15 L 53 15 L 59 23 L 59 34 L 46 34 Z" fill="#444" />
+        <path d="M 48 17 L 52 17 L 56 22 L 48 22 Z" fill="#fff" />
+        <circle cx="16" cy="34" r="5" fill="#222"/>
+        <circle cx="51" cy="34" r="5" fill="#222"/>
+        <circle cx="34" cy="34" r="5" fill="#222"/>
+        <rect x="2" y="5" width="42" height="29" rx="2" fill="{cor}" />
+    </svg>
+    <div style="font-size: 28px; font-weight: bold; color: #333; margin: 5px 0 2px 0;">{qtd}</div>
+    <div style="font-size: 11px; font-weight: bold; color: {cor}; text-transform: uppercase;">
+        {label}
+    </div>
+</div>
+"""
+            metrics_html += "</div>"
+            st.markdown(metrics_html, unsafe_allow_html=True)
                 
             st.divider()
             
@@ -139,22 +178,6 @@ if df_raw is not None:
                     mime="text/csv"
                 )
                 
-            # Mapeamento do Visual
-            cores_status = {
-                "Coleta programada": "#9e9e9e",
-                "Em carregamento": "#2196f3",
-                "Em viagem": "#ff9800",
-                "Aguardando descarga/Descarregando": "#9c27b0",
-                "Vazio": "#4caf50"
-            }
-            bg_luz = {
-                "Coleta programada": "#f5f5f5",
-                "Em carregamento": "#e3f2fd",
-                "Em viagem": "#fff3e0",
-                "Aguardando descarga/Descarregando": "#f3e5f5",
-                "Vazio": "#e8f5e9"
-            }
-
             html_cards = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:20px;'>"
             for _, row in df_view.iterrows():
                 placa = row[col_placa]
