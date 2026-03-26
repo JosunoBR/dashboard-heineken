@@ -127,6 +127,11 @@ if df_raw is not None:
                 "Vazio": "VAZIO"
             }
 
+            import urllib.parse
+            
+            # Recuperar filtro da URL
+            status_url_param = st.query_params.get("status", "Todos")
+            
             metrics_html = '<div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">'
             
             for status in ["Coleta programada", "Em carregamento", "Em viagem", "Aguardando descarga/Descarregando", "Vazio"]:
@@ -135,8 +140,12 @@ if df_raw is not None:
                 bg = bg_luz[status]
                 label = labels_curtas[status]
                 
+                href_status = urllib.parse.quote(status)
+                opacity = "1" if status_url_param == "Todos" or status_url_param == status else "0.4"
+                
                 metrics_html += f"""
-<div style="background-color: white; padding: 15px 10px; border-radius: 10px; border-bottom: 5px solid {cor}; flex: 1; min-width: 120px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
+<a href="?status={href_status}" target="_self" style="text-decoration: none; color: inherit; flex: 1; min-width: 120px; opacity: {opacity}; transition: transform 0.2s; display: block;" onmouseover="this.style.transform='scale(1.03)';" onmouseout="this.style.transform='scale(1)';">
+<div style="background-color: white; padding: 15px 10px; border-radius: 10px; border-bottom: 5px solid {cor}; height: 100%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); font-family: sans-serif;">
     <svg width="75" height="45" viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
         <path d="M 46 15 L 53 15 L 59 23 L 59 34 L 46 34 Z" fill="#444" />
         <path d="M 48 17 L 52 17 L 56 22 L 48 22 Z" fill="#fff" />
@@ -150,6 +159,7 @@ if df_raw is not None:
         {label}
     </div>
 </div>
+</a>
 """
             metrics_html += "</div>"
             metrics_html = "\n".join([line.strip() for line in metrics_html.split('\n')])
@@ -161,8 +171,14 @@ if df_raw is not None:
             
             # 5. Interface Visual (Cards Customizados em SVG)
             col_view_filtro, col_view_csv = st.columns([3, 1])
+            
+            status_filter = st.query_params.get("status", "Todos")
+            
             with col_view_filtro:
-                status_filter = st.selectbox("📌 Filtrar por Status", ["Todos"] + df_frota['Status Atual'].unique().tolist())
+                if status_filter != "Todos":
+                    st.markdown(f"**📌 Filtro Ativo:** {status_filter} &nbsp; <a href='?' target='_self' style='background-color:#eee; color:#333; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:12px;'>❌ Limpar</a>", unsafe_allow_html=True)
+                else:
+                    st.markdown("**📌 Filtro Ativo:** Todos (clique em um card superior para isolar a lista)", unsafe_allow_html=True)
             
             df_view = df_frota.copy()
             if status_filter != "Todos":
