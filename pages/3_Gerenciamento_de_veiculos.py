@@ -57,7 +57,7 @@ if df_raw is not None:
             return parsed.where(parsed <= limite_futuro, pd.NaT)
 
         # Tratar colunas de tempo
-        for col in [col_chegada_coleta, col_saida_coleta, col_chegada_cliente, col_saida_descarga]:
+        for col in [col_chegada_coleta, col_saida_coleta, col_agenda_descarga, col_chegada_cliente, col_saida_descarga]:
             df[f"{col}_dt"] = parse_dates(df[col])
 
         # Achar a data do evento mais recente da linha
@@ -174,12 +174,16 @@ if df_raw is not None:
             
             st.markdown("### 📋  Lista de Veículos")
             
-            # 5. Interface Visual (Apenas Botão de Exportação no canto)
-            _, col_view_csv = st.columns([5, 1])
+            # 5. Interface Visual (Com Barra de Pesquisa)
+            col_search, _, col_view_csv = st.columns([2, 5, 1])
+            with col_search:
+                search_placa = st.text_input("🔍 Buscar por Placa:", placeholder="Digite a placa...")
             
             status_filter = st.query_params.get("status", "Todos")
             
             df_view = df_frota.copy()
+            if search_placa:
+                df_view = df_view[df_view[col_placa].astype(str).str.contains(search_placa.strip(), case=False, na=False)]
             if status_filter != "Todos":
                 df_view = df_view[df_view['Status Atual'] == status_filter]
                 
@@ -194,7 +198,7 @@ if df_raw is not None:
                     mime="text/csv"
                 )
                 
-            html_cards = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:20px;'>"
+            html_cards = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:10px;'>"
             for _, row in df_view.iterrows():
                 placa = row[col_placa]
                 status = row['Status Atual']
@@ -206,10 +210,36 @@ if df_raw is not None:
                 dt_sai_coleta = str(row[col_saida_coleta]) if pd.notna(row[col_saida_coleta]) else "---"
                 dt_ch_cliente = str(row[col_chegada_cliente]) if pd.notna(row[col_chegada_cliente]) else "---"
                 dt_sai_descarga = str(row[col_saida_descarga]) if pd.notna(row[col_saida_descarga]) else "---"
+                agend_txt = str(row[col_agenda_descarga]) if pd.notna(row[col_agenda_descarga]) else "Sem agenda"
                 
                 # Evitar erro se o Ultimo Evento for nulo devido ao preenchimento de proteção
                 data_event = row['Ultimo_Evento_Dt'] if 'Ultimo_Evento_Dt' in row and pd.notna(row['Ultimo_Evento_Dt']) else row['Referencia_Filtro']
                 txt_ref = data_event.strftime("%d/%m/%Y") if pd.notna(data_event) else "?"
+
+                # --- LÓGICA DE ALERTA (SLA) ---
+                alertas = []
+                dt_ch_client_dt = row[f"{col_chegada_cliente}_dt"]
+                dt_agendamento_dt = row[f"{col_agenda_descarga}_dt"]
+                hoje_agora = pd.Timestamp.now()
+                
+                # SLA 1: > 2h Aguardando Descarga = Excesso
+                if status == "Aguardando descarga/Descarregando" and pd.notna(dt_ch_client_dt):
+                    horas_espera = (hoje_agora - dt_ch_client_dt).total_seconds() / 3600
+                    if horas_espera > 2:
+                        alertas.append("<span style='background-color:#ffebee; color:#f44336; border: 1px solid #f44336; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;'>⚠️ EXCESSO: >2h NA DESCARGA</span>")
+                
+                # SLA 2: Atraso de Agenda
+                if pd.notna(dt_agendamento_dt):
+                    if pd.notna(dt_ch_client_dt):
+                        # Chegou após a agenda
+                        if (dt_ch_client_dt - dt_agendamento_dt).total_seconds() > 0:
+                            alertas.append("<span style='background-color:#fff3e0; color:#ff9800; border: 1px solid #ff9800; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;'>⏳ CHEGOU ATRASADO</span>")
+                    elif status != "Vazio" and status != "Aguardando descarga/Descarregando":
+                        # Não chegou e a hora atual já passou da agenda
+                        if (hoje_agora - dt_agendamento_dt).total_seconds() > 0:
+                            alertas.append("<span style='background-color:#fff3e0; color:#ff9800; border: 1px solid #ff9800; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;'>⏰ ATRASADO P/ AGENDA</span>")
+                            
+                alertas_html = " &nbsp; ".join(alertas) if alertas else ""
 
                 html_cards += f"""
 <div style="background-color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); display: flex; align-items: center; border-left: 6px solid {cor}; font-family: sans-serif; margin-bottom: 10px;">
@@ -225,10 +255,11 @@ if df_raw is not None:
         </svg>
     </div>
     <div style="flex-grow: 1;">
-        <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px;">{placa}</h3>
-        <div style="display: flex; gap: 20px; margin-top: 5px; color: #666; font-size: 13px;">
+        <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px; display: flex; align-items: center; gap: 10px;">{placa} {alertas_html}</h3>
+        <div style="display: flex; gap: 15px; margin-top: 5px; color: #666; font-size: 12px;">
             <span><b>Coleta:</b> {dt_ch_coleta}</span>
             <span><b>Viagem:</b> {dt_sai_coleta}</span>
+            <span><b>Agenda:</b> {agend_txt}</span>
             <span><b>Descarga:</b> {dt_ch_cliente}</span>
             <span><b>Fim:</b> {dt_sai_descarga}</span>
         </div>
