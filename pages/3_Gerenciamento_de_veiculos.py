@@ -29,8 +29,9 @@ if df_raw is not None:
             st.cache_data.clear()
             st.rerun()
 
-    # C=2, M=12, U=20, V=21, X=23, Y=24, Z=25
+    # A=0, C=2, M=12, U=20, V=21, X=23, Y=24, Z=25
     if len(df_raw.columns) > 25:
+        col_dt_a = df_raw.columns[0]
         col_data_c = df_raw.columns[2]
         col_placa = df_raw.columns[12]
         col_chegada_coleta = df_raw.columns[20]
@@ -40,7 +41,7 @@ if df_raw is not None:
         col_saida_descarga = df_raw.columns[25]
 
         colunas_necessarias = [
-            col_data_c, col_placa, col_chegada_coleta, col_saida_coleta, 
+            col_dt_a, col_data_c, col_placa, col_chegada_coleta, col_saida_coleta, 
             col_agenda_descarga, col_chegada_cliente, col_saida_descarga
         ]
         
@@ -205,6 +206,13 @@ if df_raw is not None:
                 cor = cores_status.get(status, "#000000")
                 bg = bg_luz.get(status, "#ffffff")
                 
+                # Resgatar DT limpando possível zero decimal
+                dt_number = row[col_dt_a]
+                try:
+                    dt_txt = str(int(float(dt_number)))
+                except:
+                    dt_txt = str(dt_number).strip() if pd.notna(dt_number) else "Sem DT"
+                
                 # Tratar valores vazios para n dar erro no HTML
                 dt_ch_coleta = str(row[col_chegada_coleta]) if pd.notna(row[col_chegada_coleta]) else "---"
                 dt_sai_coleta = str(row[col_saida_coleta]) if pd.notna(row[col_saida_coleta]) else "---"
@@ -255,7 +263,9 @@ if df_raw is not None:
         </svg>
     </div>
     <div style="flex-grow: 1;">
-        <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px; display: flex; align-items: center; gap: 10px;">{placa} {alertas_html}</h3>
+        <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            {placa} <span style="color: #999; font-weight: normal; font-size: 16px;">- DT {dt_txt}</span> {alertas_html}
+        </h3>
         <div style="display: flex; gap: 15px; margin-top: 5px; color: #666; font-size: 12px;">
             <span><b>Coleta:</b> {dt_ch_coleta}</span>
             <span><b>Viagem:</b> {dt_sai_coleta}</span>
