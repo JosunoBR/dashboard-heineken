@@ -29,10 +29,12 @@ if df_raw is not None:
             st.cache_data.clear()
             st.rerun()
 
-    # A=0, C=2, M=12, U=20, V=21, X=23, Y=24, Z=25
+    # A=0, C=2, J=9, K=10, M=12, U=20, V=21, X=23, Y=24, Z=25
     if len(df_raw.columns) > 25:
         col_dt_a = df_raw.columns[0]
         col_data_c = df_raw.columns[2]
+        col_origem_j = df_raw.columns[9]
+        col_destino_k = df_raw.columns[10]
         col_placa = df_raw.columns[12]
         col_chegada_coleta = df_raw.columns[20]
         col_saida_coleta = df_raw.columns[21]
@@ -41,8 +43,9 @@ if df_raw is not None:
         col_saida_descarga = df_raw.columns[25]
 
         colunas_necessarias = [
-            col_dt_a, col_data_c, col_placa, col_chegada_coleta, col_saida_coleta, 
-            col_agenda_descarga, col_chegada_cliente, col_saida_descarga
+            col_dt_a, col_data_c, col_origem_j, col_destino_k, col_placa, 
+            col_chegada_coleta, col_saida_coleta, col_agenda_descarga, 
+            col_chegada_cliente, col_saida_descarga
         ]
         
         df = df_raw[colunas_necessarias].copy()
@@ -213,6 +216,11 @@ if df_raw is not None:
                 except:
                     dt_txt = str(dt_number).strip() if pd.notna(dt_number) else "Sem DT"
                 
+                # Resgatar Rota Origem x Destino
+                origem_rot = str(row[col_origem_j]).strip().upper() if pd.notna(row[col_origem_j]) else "?"
+                destino_rot = str(row[col_destino_k]).strip().upper() if pd.notna(row[col_destino_k]) else "?"
+                rota_txt = f"{origem_rot} x {destino_rot}"
+                
                 # Tratar valores vazios para n dar erro no HTML
                 dt_ch_coleta = str(row[col_chegada_coleta]) if pd.notna(row[col_chegada_coleta]) else "---"
                 dt_sai_coleta = str(row[col_saida_coleta]) if pd.notna(row[col_saida_coleta]) else "---"
@@ -264,7 +272,7 @@ if df_raw is not None:
     </div>
     <div style="flex-grow: 1;">
         <h3 style="margin: 0; padding: 0; color: #333; font-size: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            {placa} <span style="color: #999; font-weight: normal; font-size: 16px;">- DT {dt_txt}</span> {alertas_html}
+            {placa} <span style="color: #999; font-weight: normal; font-size: 15px;">- DT {dt_txt} - {rota_txt}</span> {alertas_html}
         </h3>
         <div style="display: flex; gap: 15px; margin-top: 5px; color: #666; font-size: 12px;">
             <span><b>Coleta:</b> {dt_ch_coleta}</span>
