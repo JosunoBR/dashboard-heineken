@@ -29,8 +29,9 @@ if df_raw is not None:
             st.cache_data.clear()
             st.rerun()
 
-    # M=12, U=20, V=21, X=23, Y=24, Z=25
+    # C=2, M=12, U=20, V=21, X=23, Y=24, Z=25
     if len(df_raw.columns) > 25:
+        col_data_c = df_raw.columns[2]
         col_placa = df_raw.columns[12]
         col_chegada_coleta = df_raw.columns[20]
         col_saida_coleta = df_raw.columns[21]
@@ -39,7 +40,7 @@ if df_raw is not None:
         col_saida_descarga = df_raw.columns[25]
 
         colunas_necessarias = [
-            col_placa, col_chegada_coleta, col_saida_coleta, 
+            col_data_c, col_placa, col_chegada_coleta, col_saida_coleta, 
             col_agenda_descarga, col_chegada_cliente, col_saida_descarga
         ]
         
@@ -65,10 +66,13 @@ if df_raw is not None:
         hoje = pd.Timestamp.now()
         limite_2_meses = hoje - pd.DateOffset(months=2)
 
-        mask_tempo = df['Ultimo_Evento_Dt'] >= limite_2_meses
-        mask_sem_evento = df['Ultimo_Evento_Dt'].isna()
+        # Tratar a coluna base C (DATA) para usar como referência de linhas sem horários
+        df[f"{col_data_c}_dt"] = parse_dates(df[col_data_c])
+        df['Referencia_Filtro'] = df['Ultimo_Evento_Dt'].fillna(df[f"{col_data_c}_dt"])
         
-        df_filtrado = df[mask_tempo | mask_sem_evento].copy()
+        mask_tempo = df['Referencia_Filtro'] >= limite_2_meses
+        
+        df_filtrado = df[mask_tempo].copy()
 
         # 3. Desduplicação (manter a viagem mais atual)
         df_filtrado = df_filtrado.sort_values(by='Ultimo_Evento_Dt', ascending=False)
@@ -117,7 +121,7 @@ if df_raw is not None:
             if status_filter != "Todos":
                 df_view = df_view[df_view['Status Atual'] == status_filter]
                 
-            cols_to_drop = [c for c in df_view.columns if c.endswith("_dt") or c in ["Ultimo_Evento_Dt"]]
+            cols_to_drop = [c for c in df_view.columns if c.endswith("_dt") or c in ["Ultimo_Evento_Dt", "Referencia_Filtro"]]
             df_view = df_view.drop(columns=cols_to_drop)
             
             cols = [col_placa, 'Status Atual'] + [c for c in df_view.columns if c not in [col_placa, 'Status Atual']]
