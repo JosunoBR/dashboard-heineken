@@ -50,7 +50,11 @@ if df_raw is not None:
         df = df[df[col_placa].notna() & (df[col_placa].astype(str).str.strip() != "")]
         
         def parse_dates(series):
-            return pd.to_datetime(series, errors='coerce', dayfirst=True)
+            parsed = pd.to_datetime(series, errors='coerce', dayfirst=True)
+            # Proteção contra erros de digitação (ex: digitar 2028 ou mês 06 no lugar de 02)
+            # Vai tratar como vazio (NaT) datas além de hoje, forçando usar a etapa anterior válida
+            limite_futuro = pd.Timestamp.now() + pd.DateOffset(days=1)
+            return parsed.where(parsed <= limite_futuro, pd.NaT)
 
         # Tratar colunas de tempo
         for col in [col_chegada_coleta, col_saida_coleta, col_chegada_cliente, col_saida_descarga]:
@@ -74,9 +78,10 @@ if df_raw is not None:
         
         df_filtrado = df[mask_tempo].copy()
 
-        # 3. Desduplicação (manter a viagem mais atual)
-        df_filtrado = df_filtrado.sort_values(by='Ultimo_Evento_Dt', ascending=False)
-        df_frota = df_filtrado.drop_duplicates(subset=[col_placa], keep='first').copy()
+        # 3. Desduplicação (baseada na ordem da planilha)
+        # Mudar para manter a última ocorrência física (keep='last') da placa, 
+        # garantindo imunidade total contra datas digitadas incorretamente.
+        df_frota = df_filtrado.drop_duplicates(subset=[col_placa], keep='last').copy()
 
         # 4. Lógica de Status
         def definir_status(row):
