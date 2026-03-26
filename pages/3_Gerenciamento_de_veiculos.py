@@ -174,16 +174,10 @@ if df_raw is not None:
             
             st.markdown("### 📋  Lista de Veículos")
             
-            # 5. Interface Visual (Cards Customizados em SVG)
-            col_view_filtro, col_view_csv = st.columns([3, 1])
+            # 5. Interface Visual (Apenas Botão de Exportação no canto)
+            _, col_view_csv = st.columns([5, 1])
             
             status_filter = st.query_params.get("status", "Todos")
-            
-            with col_view_filtro:
-                if status_filter != "Todos":
-                    st.markdown(f"**📌 Filtro Ativo:** {status_filter} &nbsp; <a href='?' target='_self' style='background-color:#eee; color:#333; padding:4px 8px; border-radius:4px; text-decoration:none; font-size:12px;'>❌ Limpar</a>", unsafe_allow_html=True)
-                else:
-                    st.markdown("**📌 Filtro Ativo:** Todos (clique em um card superior para isolar a lista)", unsafe_allow_html=True)
             
             df_view = df_frota.copy()
             if status_filter != "Todos":
