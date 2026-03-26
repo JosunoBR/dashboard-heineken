@@ -140,7 +140,12 @@ if df_raw is not None:
                 bg = bg_luz[status]
                 label = labels_curtas[status]
                 
-                href_status = urllib.parse.quote(status)
+                # Lógica de toggle: se já estiver selecionado, clicar novamente limpa o filtro
+                if status_url_param == status:
+                    href_status = "Todos"
+                else:
+                    href_status = urllib.parse.quote(status)
+                    
                 opacity = "1" if status_url_param == "Todos" or status_url_param == status else "0.4"
                 
                 metrics_html += f"""
