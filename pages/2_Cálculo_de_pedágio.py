@@ -51,10 +51,11 @@ def strip_accents(text):
     )
 
 def normalize_currency(value):
-    """Padroniza o valor monetário no formato 'R$ 00,00'."""
+    """Padroniza o valor monetário preservando o sinal (ex: 'R$ 00,00' ou '-R$ 00,00')."""
     value = value.replace("\u00a0", " ").strip()
     value = re.sub(r"\s+", " ", value)
-    value = value.replace("-R$", "R$").replace("- R$", "R$")
+    # Padroniza diferentes tipos de traços presentes no PDF para o sinal de menos padrão
+    value = re.sub(r"[-\u2013\u2014]\s*R\$", "-R$", value)
     return value.strip()
 
 def parse_filter_datetime(datetime_text, end_of_minute=False):
@@ -99,7 +100,7 @@ def extract_toll_info(text):
         r"(\d{2}/\d{2}/\d{4})\s*"
         r"(\d{2}:\d{2}:\d{2})"
         r".*?"
-        r"(R\$\s*[\d\.]+,\d{2})",
+        r"([-\u2013\u2014]?\s*R\$\s*[\d\.]+,\d{2})",
         flags=re.IGNORECASE
     )
 
@@ -202,13 +203,17 @@ if st.session_state.toll_history:
     total_soma = 0.0
     for valor_str in df_history["Valor da Transação"]:
         # Limpa a string "R$ 72,96" para converter em float 72.96
-        num_str = valor_str.replace("R$", "").replace(".", "").replace(",", ".").strip()
+        # Remove espaços adicionais para que "- R$ 72,96" seja convertido limpo para "-72.96"
+        num_str = valor_str.replace("R$", "").replace(".", "").replace(",", ".").replace(" ", "").strip()
         try:
             total_soma += float(num_str)
         except ValueError:
             pass
     
-    total_formatado = f"R$ {total_soma:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    if total_soma < 0:
+        total_formatado = f"-R$ {abs(total_soma):,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    else:
+        total_formatado = f"R$ {total_soma:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
     st.markdown(f"### 💰 Valor Total: **{total_formatado}**")
 
     # Botão para limpar o histórico
