@@ -20,6 +20,10 @@ if 'toll_history' not in st.session_state:
 if 'processed_pdf_hashes' not in st.session_state:
     st.session_state.processed_pdf_hashes = set()
 
+if st.session_state.toll_history and "Valor Numérico" not in st.session_state.toll_history[0]:
+    st.session_state.toll_history = []
+    st.session_state.processed_pdf_hashes = set()
+
 # --- Funções de Extração de Dados ---
 
 @st.cache_data
@@ -51,12 +55,37 @@ def strip_accents(text):
     )
 
 def normalize_currency(value):
-    """Padroniza o valor monetário preservando o sinal (ex: 'R$ 00,00' ou '-R$ 00,00')."""
+    """Padroniza o valor monetário no formato 'R$ 00,00' ou '-R$ 00,00'."""
     value = value.replace("\u00a0", " ").strip()
     value = re.sub(r"\s+", " ", value)
-    # Padroniza diferentes tipos de traços presentes no PDF para o sinal de menos padrão
-    value = re.sub(r"[-\u2013\u2014]\s*R\$", "-R$", value)
+    value = re.sub(r"^\s*[-\u2013\u2014]\s*R\$\s*", "-R$ ", value)
+    value = re.sub(r"^\s*R\$\s*", "R$ ", value)
     return value.strip()
+
+def currency_to_float(value):
+    """Converte 'R$ 00,00' ou '-R$ 00,00' para float."""
+    normalized_value = normalize_currency(value)
+    is_negative = normalized_value.startswith("-")
+    numeric_text = normalized_value.replace("-R$ ", "").replace("R$ ", "").replace(".", "").replace(",", ".")
+
+    try:
+        amount = float(numeric_text)
+    except ValueError:
+        return 0.0
+
+    return -amount if is_negative else amount
+
+def format_currency(value):
+    """Formata float no padrão monetário brasileiro preservando o sinal."""
+    prefix = "-R$" if value < 0 else "R$"
+    formatted_amount = f"{abs(value):,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    return f"{prefix} {formatted_amount}"
+
+def apply_transaction_sign(transaction_type, amount):
+    """Aplica a regra de sinal conforme o tipo da transação."""
+    if "estorno" in transaction_type.lower():
+        return abs(amount)
+    return -abs(amount)
 
 def parse_filter_datetime(datetime_text, end_of_minute=False):
     """Converte o texto digitado no filtro para datetime com precisão de minuto."""
@@ -93,23 +122,27 @@ def extract_toll_info(text):
     if placa_match:
         placa = placa_match.group(0)
 
-    # 2. Extrair as transações usando a data/hora após "Pedagio"
+    # 2. Extrair as transações usando o tipo da linha para definir o sinal
     transacoes_regex = re.compile(
         r"(?:\d{2}/\d{2}/\d{4}\s*\d{2}:\d{2}:\d{2})\s*"
-        r"Pedagio\s*"
+        r"(Estorno\s+)?Pedagio\s*"
         r"(\d{2}/\d{2}/\d{4})\s*"
         r"(\d{2}:\d{2}:\d{2})"
         r".*?"
-        r"([-\u2013\u2014]?\s*R\$\s*[\d\.]+,\d{2})",
+        r"(R\$\s*[\d\.]+,\d{2})",
         flags=re.IGNORECASE
     )
 
     for match in transacoes_regex.finditer(searchable_text):
-        data = f"{match.group(1)} {match.group(2)}"
-        valor = normalize_currency(match.group(3))
+        transaction_type = "Estorno Pedágio" if match.group(1) else "Pedágio"
+        data = f"{match.group(2)} {match.group(3)}"
+        raw_amount = currency_to_float(match.group(4))
+        signed_amount = apply_transaction_sign(transaction_type, raw_amount)
         extracted_data.append({
             "Data da Transação": data,
-            "Valor da Transação": valor
+            "Valor da Transação": format_currency(signed_amount),
+            "Valor Numérico": signed_amount,
+            "Tipo de Transação": transaction_type
         })
             
     return placa, extracted_data
@@ -175,6 +208,9 @@ if st.session_state.toll_history:
         ]
 
     df_history = pd.DataFrame(st.session_state.toll_history)
+    if "Valor Numérico" not in df_history.columns:
+        df_history["Valor Numérico"] = df_history["Valor da Transação"].apply(currency_to_float)
+
     df_history["Data da Transação Dt"] = pd.to_datetime(
         df_history["Data da Transação"],
         format="%d/%m/%Y %H:%M:%S",
@@ -196,24 +232,12 @@ if st.session_state.toll_history:
         if end_datetime:
             df_history = df_history[df_history["Data da Transação Dt"] <= end_datetime]
 
-    df_history = df_history.drop(columns=["Data da Transação Dt"])
-    st.dataframe(df_history, width='stretch')
+    df_display = df_history.drop(columns=["Data da Transação Dt", "Valor Numérico", "Tipo de Transação"], errors="ignore")
+    st.dataframe(df_display, width='stretch')
 
     # --- Cálculo do Valor Total ---
-    total_soma = 0.0
-    for valor_str in df_history["Valor da Transação"]:
-        # Limpa a string "R$ 72,96" para converter em float 72.96
-        # Remove espaços adicionais para que "- R$ 72,96" seja convertido limpo para "-72.96"
-        num_str = valor_str.replace("R$", "").replace(".", "").replace(",", ".").replace(" ", "").strip()
-        try:
-            total_soma += float(num_str)
-        except ValueError:
-            pass
-    
-    if total_soma < 0:
-        total_formatado = f"-R$ {abs(total_soma):,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
-    else:
-        total_formatado = f"R$ {total_soma:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    total_soma = df_history["Valor Numérico"].sum()
+    total_formatado = format_currency(total_soma)
     st.markdown(f"### 💰 Valor Total: **{total_formatado}**")
 
     # Botão para limpar o histórico
